@@ -1,13 +1,17 @@
 # AIRDROP
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
+ECDSA signature dependent airdrop of EMB ERC20 token contract.
 
-Try running some of the following tasks:
+##
 
-```shell
-npx hardhat help
-npx hardhat test
+Instead of minting and distributing all the tokens in a single transaction (which might not be possible if the number of minters is large), the Protocol authenticate minters using ECDSA signatures
+
+## Usage
+
+```
+npm install hardhat
 REPORT_GAS=true npx hardhat test
+npx hardhat coverage
 npx hardhat node
 npx hardhat run scripts/deploy.ts
 ```
