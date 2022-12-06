@@ -1,23 +1,39 @@
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { expect } from "chai";
 import { ethers } from "hardhat";
+import { Protocol, ERC20, EMBToken } from "../typechain-types";
 
-async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+const provider = ethers.provider
+let account1: SignerWithAddress
+let account2: SignerWithAddress
+let rest: SignerWithAddress[]
 
-  const lockedAmount = ethers.utils.parseEther("1");
+let EMBToken: EMBToken
+let protocol: Protocol
+let merkleRoot: string
 
-  const Lock = await ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
+describe("Protocol", function () {
+  before(async () => {
+    ;[account1, account2, ...rest] = await ethers.getSigners()
 
-  await lock.deployed();
+    EMBToken = (await (await ethers.getContractFactory("EMBToken")).deploy("EMB Token", "EMB")) as EMBToken
+    await EMBToken.deployed()
+  })
 
-  console.log(`Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`);
-}
+  beforeEach(async () => {
+    protocol = await (await ethers.getContractFactory("Protocol")).deploy(account1.address, EMBToken.address)
+    await protocol.deployed()
+  })
 
-// We recommend this pattern to be able to use async/await everywhere
-// and properly handle errors.
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+  describe("setup", () => {
+
+    it("should deploy correctly", async () => {
+      // if the beforeEach succeeded, then this succeeds
+    })
+
+  describe("Signature minting", () => {
+    it ("TODO", async () => {
+      throw new Error("TODO: add more tests here!")
+    })
+  })
 });
