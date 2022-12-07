@@ -1,11 +1,8 @@
-import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
-import { formatEther, parseEther, parseUnits } from "ethers/lib/utils";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Protocol, EMBToken, ERC20 } from "../typechain-types";
+import { EMBToken } from "../typechain-types";
 
 import { expect } from "chai";
 import { ethers } from "hardhat";
-import { string } from "hardhat/internal/core/params/argumentTypes";
 
 describe("EMB-Token", () => {
   const provider = ethers.provider;
@@ -17,8 +14,8 @@ describe("EMB-Token", () => {
   let NAME: string;
   let roleMinter: string;
   let ZERO_ADDRESS: string;
-
   let EMBToken: EMBToken;
+
   beforeEach(async function () {
     [owner, account1, account2, ...rest] = await ethers.getSigners();
     NAME = "EMBToken";

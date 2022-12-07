@@ -9,6 +9,7 @@ import { ethers } from "hardhat";
 describe("Protocol", () => {
   const provider = ethers.provider;
   let owner: SignerWithAddress;
+  let signer: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
   let rest: SignerWithAddress[];
@@ -16,19 +17,31 @@ describe("Protocol", () => {
   let EMBToken: EMBToken;
   let protocol: Protocol;
   let merkleRoot: string;
+
+  let SYMBOL: string;
+  let NAME: string;
+  let roleMinter: string;
+
   beforeEach(async function () {
-    [owner, account1, account2, ...rest] = await ethers.getSigners();
+    [owner, signer, account1, account2, ...rest] = await ethers.getSigners();
+
+    NAME = "EMBToken";
+    SYMBOL = "EMB";
+
+    roleMinter = ethers.utils.keccak256(
+      ethers.utils.toUtf8Bytes("MINTER_ROLE")
+    );
 
     EMBToken = (await (
-      await ethers.getContractFactory("EMBToken")
-    ).deploy("EMB Token", "EMB")) as EMBToken;
+      await ethers.getContractFactory(NAME)
+    ).deploy(NAME, SYMBOL)) as EMBToken;
     await EMBToken.deployed();
   });
 
   beforeEach(async function () {
     protocol = await (
       await ethers.getContractFactory("Protocol")
-    ).deploy(account1.address, EMBToken.address);
+    ).deploy(signer.address, EMBToken.address);
     await protocol.deployed();
   });
 
