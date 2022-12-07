@@ -14,6 +14,11 @@ contract Protocol is Ownable {
     /// @notice Address of the EMB ERC20 token
     IERC20 public immutable EMBToken;
 
+    /**
+    @dev Record of already-used signatures.
+     */
+    mapping(bytes32 => bool) public usedMessages;
+
     /// @notice The address whose private key will create all the signatures which minters
     /// can use to mint their EMB tokens
     address public immutable signer;

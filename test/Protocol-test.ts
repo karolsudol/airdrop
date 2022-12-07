@@ -6,7 +6,7 @@ import { Protocol, EMBToken, ERC20 } from "../typechain-types";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("MultiSigWallet", () => {
+describe("Protocol", () => {
   const provider = ethers.provider;
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
