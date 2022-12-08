@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 /// @author
 /// @notice A simple ERC20 token that will be distributed by the protocol
 contract Token is ERC20, Ownable {
+    event Minted(address account, uint256 amount, uint256 ts);
+
     /**
      * @notice token instance constructor
      *
