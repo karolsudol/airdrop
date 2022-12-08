@@ -1,10 +1,11 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { formatEther, parseEther, parseUnits } from "ethers/lib/utils";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Protocol, EMBToken, ERC20 } from "../typechain-types";
+import { Protocol, EMBToken, ERC20, IERC20 } from "../typechain-types";
 
 import { expect } from "chai";
 import { ethers } from "hardhat";
+import { types } from "hardhat/config";
 
 describe("Protocol", () => {
   const provider = ethers.provider;
@@ -45,8 +46,13 @@ describe("Protocol", () => {
     await protocol.deployed();
   });
 
-  describe("setup", async function () {
-    it("should deploy correctly", async () => {});
+  describe("deploy", async function () {
+    // it("should set signer correctly", async () => {
+    //   expect(await protocol.signer.getAddress()).to.equal(signer.address);
+    // });
+    // it("should set EMBToken correctly", async () => {
+    //   expect(types(protocol.EMBToken)).to.equal(EMBToken.address);
+    // });
   });
   describe("Signature minting", async function () {
     it("TODO", async () => {});
