@@ -1,7 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { formatEther, parseEther, parseUnits } from "ethers/lib/utils";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Protocol, EMBToken, ERC20, IERC20 } from "../typechain-types";
+import { Airdrop, EMBToken, ERC20, IERC20 } from "../typechain-types";
 
 import { expect } from "chai";
 import { ethers } from "hardhat";
@@ -16,7 +16,7 @@ describe("Protocol", () => {
   let rest: SignerWithAddress[];
 
   let EMBToken: EMBToken;
-  let protocol: Protocol;
+  let airdrop: Airdrop;
   let merkleRoot: string;
 
   let SYMBOL: string;
@@ -40,10 +40,10 @@ describe("Protocol", () => {
   });
 
   beforeEach(async function () {
-    protocol = await (
-      await ethers.getContractFactory("Protocol")
-    ).deploy(signer.address, EMBToken.address);
-    await protocol.deployed();
+    airdrop = await (
+      await ethers.getContractFactory("Airdrop")
+    ).deploy(signer.address, EMBToken.address, 10);
+    await airdrop.deployed();
   });
 
   describe("deploy", async function () {
