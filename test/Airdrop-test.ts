@@ -1,7 +1,7 @@
 import { loadFixture } from "@nomicfoundation/hardhat-network-helpers";
 import { formatEther, parseEther, parseUnits } from "ethers/lib/utils";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Airdrop, EMBToken, ERC20, IERC20 } from "../typechain-types";
+import { Airdrop, Token, ERC20, IERC20 } from "../typechain-types";
 
 import { expect } from "chai";
 import { ethers } from "hardhat";
@@ -9,40 +9,41 @@ import { types } from "hardhat/config";
 
 describe("Protocol", () => {
   const provider = ethers.provider;
+
   let owner: SignerWithAddress;
   let signer: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
   let rest: SignerWithAddress[];
 
-  let EMBToken: EMBToken;
+  let token: Token;
   let airdrop: Airdrop;
   let merkleRoot: string;
 
-  let SYMBOL: string;
-  let NAME: string;
-  let roleMinter: string;
+  const MAX_SUPPLY = 10;
+  const MAX_PER_MINT = 2;
+
+  const NAME = "Token";
+  const SYMBOL = "TKN";
 
   beforeEach(async function () {
     [owner, signer, account1, account2, ...rest] = await ethers.getSigners();
 
-    NAME = "EMBToken";
-    SYMBOL = "EMB";
-
-    roleMinter = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes("MINTER_ROLE")
-    );
-
-    EMBToken = (await (
+    token = (await (
       await ethers.getContractFactory(NAME)
-    ).deploy(NAME, SYMBOL)) as EMBToken;
-    await EMBToken.deployed();
+    ).deploy(NAME, SYMBOL)) as Token;
+    await token.deployed();
   });
 
   beforeEach(async function () {
-    airdrop = await (
+    airdrop = (await (
       await ethers.getContractFactory("Airdrop")
-    ).deploy(signer.address, EMBToken.address, 10);
+    ).deploy(
+      signer.address,
+      token.address,
+      MAX_SUPPLY,
+      MAX_PER_MINT
+    )) as Airdrop;
     await airdrop.deployed();
   });
 

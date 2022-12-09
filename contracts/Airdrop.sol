@@ -7,9 +7,11 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import "./Token.sol";
 
 /**
- * @title Protocol
- * @notice A contract for minting EMB token which allows minters to mint their tokens using signatures.
+ * @title Airdrop
  *
+ * @notice A contract allows minters to mint their ERC20 tokens using eip-712 signatures verification.
+ *
+ * @dev https://github.com/ethereum/EIPs/blob/master/assets/eip-712
  */
 contract Airdrop is Ownable {
     /* ======================= EVENTS ======================= */
@@ -19,7 +21,7 @@ contract Airdrop is Ownable {
     /* ======================= PUBLIC STATE VARS ======================= */
 
     /**
-    @notice Record of already-used signatures.
+     * @notice Record of already-used signatures.
      */
     mapping(bytes => bool) public usedMessages;
 
@@ -31,12 +33,17 @@ contract Airdrop is Ownable {
     /**
      * @notice A var to keep track of already minted  airdrop tokens
      */
-    uint256 public currentMintedAmount;
+    uint256 public supply;
 
     /**
      * @notice max total airdrop tokens allowed
      */
-    uint256 public maxAmountMinted;
+    uint256 public maxSupply;
+
+    /**
+     * @notice max total airdrop tokens allowed in one mint
+     */
+    uint256 public maxPerMint;
 
     /* ======================= CONST PRIVATE RE-ENTTANCE VARS ======================= */
 
@@ -53,9 +60,9 @@ contract Airdrop is Ownable {
     address public immutable signer;
 
     /**
-     * @notice EMB ERC20 token address instance
+     * @notice ERC20 token address instance
      */
-    IERC20 public immutable token;
+    address public immutable token;
 
     /* ======================= EIP-712 - DOMAIN ======================= */
 
@@ -73,8 +80,6 @@ contract Airdrop is Ownable {
      * @notice the EIP712 domain separator for minting EMB
      */
     bytes32 public immutable DOMAIN_SEPARATOR;
-
-    // bytes32 DOMAIN_SEPARATOR;
 
     bytes32 constant EIP712DOMAIN_TYPEHASH =
         keccak256(
@@ -104,20 +109,24 @@ contract Airdrop is Ownable {
      *
      * @param _signer address of the off chain signer worker
      * @param _token instance of the EMBToken that will be minted
-     * @param _maxAmountMinted total mintalble amount allocated to the airdrop
+     * @param _maxSupply total mintalble amount allocated to the whole airdrop
+     * @param _maxPerMint max amount to mint per one airdrop
      *
      * @dev `EIP712_DOMAIN` and `NOT_ENTERED` reentrancy status are also set here.
      */
     constructor(
         address _signer,
-        IERC20 _token,
-        uint256 _maxAmountMinted
+        address _token,
+        uint256 _maxSupply,
+        uint256 _maxPerMint
     ) {
         signer = _signer;
         token = _token;
-        maxAmountMinted = _maxAmountMinted;
+        maxSupply = _maxSupply;
+        supply = 0;
+        maxPerMint = _maxPerMint;
 
-        DOMAIN_SEPARATOR = hash(
+        DOMAIN_SEPARATOR = hashDomain(
             EIP712Domain({
                 name: "Airdrop",
                 version: "1",
@@ -156,7 +165,15 @@ contract Airdrop is Ownable {
      *  @dev Prevents an address from multiple claims
      */
     modifier claimed() {
-        require(airdrops[msg.sender] == false, "Airdrop: user already claimed");
+        require(airdrops[msg.sender] == false, "Airdrop: user claimed");
+        _;
+    }
+
+    /**
+     *  @dev Prevents from exceeding total airdrop allowance
+     */
+    modifier maxMinted() {
+        require(maxSupply < supply, "Airdrop: max supply");
         _;
     }
 
@@ -175,14 +192,13 @@ contract Airdrop is Ownable {
      */
     function signatureMint(bytes calldata signature, uint256 amount)
         external
+        maxMinted
         nonReentrant
         claimed
     {
+        require(amount <= maxPerMint, "Airdrop: max mint amount");
         require(signature.length == 65, "Airdrop: invalid signature length");
-        require(
-            usedMessages[signature] == false,
-            "Airdrop: signature already used"
-        );
+        require(usedMessages[signature] == false, "Airdrop: signature used");
 
         Mint memory mint;
         mint = Mint(msg.sender, amount);
@@ -194,17 +210,19 @@ contract Airdrop is Ownable {
 
         require(verify(mint, v, r, s), "Airdrop: invalid signature");
 
+        // require(usedMessages[signature] == chainId, "Airdrop: invalid chainId");
+
+        Token(token).mint(msg.sender, amount);
+
         airdrops[msg.sender] = true;
         usedMessages[signature] = true;
-
-        Token(address(token)).mint(msg.sender, amount);
 
         emit AirdropProcessed(msg.sender, amount, block.timestamp);
     }
 
     /* ======================= INTERNAL FUNCTIONS ======================= */
 
-    function hash(EIP712Domain memory eip712Domain)
+    function hashDomain(EIP712Domain memory eip712Domain)
         internal
         pure
         returns (bytes32)
@@ -221,7 +239,7 @@ contract Airdrop is Ownable {
             );
     }
 
-    function hash(Mint memory mint) internal pure returns (bytes32) {
+    function hashMint(Mint memory mint) internal pure returns (bytes32) {
         return keccak256(abi.encode(MINT_TYPEHASH, mint.minter, mint.amount));
     }
 
@@ -232,9 +250,9 @@ contract Airdrop is Ownable {
         bytes32 s
     ) internal view returns (bool) {
         bytes32 digest = keccak256(
-            abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hash(mint))
+            abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, hashMint(mint))
         );
-        return ecrecover(digest, v, r, s) == mint.minter;
+        return signer == ecrecover(digest, v, r, s);
     }
 
     function splitSignature(bytes memory sig)
@@ -281,14 +299,14 @@ contract Airdrop is Ownable {
      *
      * @return A 32-byte hash, which will have been signed by `Protocol.signer`
      */
-    // function toTypedDataHash(address _minter, uint256 _amount)
-    //     internal
-    //     view
-    //     returns (bytes32)
-    // {
-    //     bytes32 structHash = keccak256(
-    //         abi.encode(SUPPORT_TYPEHASH, _minter, _amount)
-    //     );
-    //     return ECDSA.toTypedDataHash(EIP712_DOMAIN, structHash);
-    // }
+    function toTypedDataHash(address _minter, uint256 _amount)
+        internal
+        view
+        returns (bytes32)
+    {
+        bytes32 structHash = keccak256(
+            abi.encode(EIP712DOMAIN_TYPEHASH, _minter, _amount)
+        );
+        return ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
+    }
 }
