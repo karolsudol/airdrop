@@ -185,6 +185,7 @@ contract Airdrop is Ownable {
      * @notice Allows a msg.sender to mint their EMB token by providing a signature is signed by the `Protocol.signer` address.
      *
      * @param signature An array of bytes representing a signature created by the  `Airdrop.signer` address
+     * @param amount the value of ERC20 token to be minted
      *
      * @dev See `Protocol.toTypedDataHash` for how to format the pre-signed data
      * @dev An address can only mint its token and only once
@@ -196,7 +197,7 @@ contract Airdrop is Ownable {
         nonReentrant
         claimed
     {
-        require(amount <= maxPerMint, "Airdrop: max mint amount");
+        require(amount <= maxPerMint, "Airdrop: max per mint");
         require(signature.length == 65, "Airdrop: invalid signature length");
         require(usedMessages[signature] == false, "Airdrop: signature used");
 
@@ -210,12 +211,12 @@ contract Airdrop is Ownable {
 
         require(verify(mint, v, r, s), "Airdrop: invalid signature");
 
-        // require(usedMessages[signature] == chainId, "Airdrop: invalid chainId");
-
         Token(token).mint(msg.sender, amount);
 
         airdrops[msg.sender] = true;
         usedMessages[signature] = true;
+
+        supply += amount;
 
         emit AirdropProcessed(msg.sender, amount, block.timestamp);
     }
@@ -255,6 +256,13 @@ contract Airdrop is Ownable {
         return signer == ecrecover(digest, v, r, s);
     }
 
+    /**
+     * @dev Helper function for formatting the minter data in an EIP-712 compatible way
+     *
+     * @param sig signature msg received from a sender
+     *
+     * @return A 32-byte hash, which will have been signed by `Protocol.signer`
+     */
     function splitSignature(bytes memory sig)
         internal
         pure
