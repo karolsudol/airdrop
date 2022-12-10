@@ -173,7 +173,7 @@ contract Airdrop is Ownable {
      *  @dev Prevents from exceeding total airdrop allowance
      */
     modifier maxMinted() {
-        require(maxSupply < supply, "Airdrop: max supply");
+        require(maxSupply >= supply, "Airdrop: maxed supply");
         _;
     }
 

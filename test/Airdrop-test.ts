@@ -7,18 +7,18 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { types } from "hardhat/config";
 
-describe("Protocol", () => {
+describe("Airdrop", () => {
   const provider = ethers.provider;
 
   let owner: SignerWithAddress;
   let signer: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
-  let rest: SignerWithAddress[];
+  // let rest: SignerWithAddress[];
 
   let token: Token;
   let airdrop: Airdrop;
-  let merkleRoot: string;
+  // let merkleRoot: string;
 
   const MAX_SUPPLY = 10;
   const MAX_PER_MINT = 2;
@@ -27,7 +27,7 @@ describe("Protocol", () => {
   const SYMBOL = "TKN";
 
   beforeEach(async function () {
-    [owner, signer, account1, account2, ...rest] = await ethers.getSigners();
+    [owner, account1, account2] = await ethers.getSigners();
 
     token = (await (
       await ethers.getContractFactory(NAME)
@@ -39,7 +39,7 @@ describe("Protocol", () => {
     airdrop = (await (
       await ethers.getContractFactory("Airdrop")
     ).deploy(
-      signer.address,
+      owner.address,
       token.address,
       MAX_SUPPLY,
       MAX_PER_MINT
@@ -48,14 +48,37 @@ describe("Protocol", () => {
   });
 
   describe("deploy", async function () {
-    // it("should set signer correctly", async () => {
-    //   expect(await protocol.signer.getAddress()).to.equal(signer.address);
-    // });
-    // it("should set EMBToken correctly", async () => {
-    //   expect(types(protocol.EMBToken)).to.equal(EMBToken.address);
-    // });
+    it("should set signer correctly", async () => {
+      // expect(await airdrop.signer.getAddress()).to.equal(
+      //   await signer.getAddress()
+      // );
+    });
+    it("should set token correctly", async () => {
+      // expect(airdrop.token).to.equal(token.address);
+    });
   });
-  describe("Signature minting", async function () {
-    it("TODO", async () => {});
+  describe("signature minting", async function () {
+    it("should mint correctly", async () => {
+      expect(await token.balanceOf(account1.address)).to.equal(0);
+      expect(await token.totalSupply()).to.equal(0);
+
+      await token.connect(owner).transferOwnership(airdrop.address);
+
+      let messageHash = ethers.utils.solidityKeccak256(
+        ["address", "uint256"],
+        [account1.address, 2]
+      );
+      const messageArray = ethers.utils.arrayify(messageHash);
+      const rawSignature = await owner.signMessage(messageArray);
+      // console.log("signer          ", signer.address);
+      // console.log(
+      //   "signer airdrop          ",
+      //   await airdrop.signer.getAddress()
+      // );
+      // console.log(" airdrop          ", airdrop.address);
+      // console.log("token airdrop          ", await token.signer.getAddress());
+
+      await airdrop.connect(account1).signatureMint(rawSignature, 2);
+    });
   });
 });

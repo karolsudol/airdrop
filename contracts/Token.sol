@@ -13,7 +13,6 @@ contract Token is ERC20, Ownable {
     event Minted(address account, uint256 amount, uint256 ts);
 
     address private _owner;
-    uint256 public decimals = 18;
 
     /**
      * @notice token instance constructor
@@ -32,6 +31,6 @@ contract Token is ERC20, Ownable {
      * @param amount amount of token units to mint
      */
     function mint(address account, uint256 amount) external onlyOwner {
-        _mint(account, amount * (10**uint256(decimals)));
+        _mint(account, amount);
     }
 }

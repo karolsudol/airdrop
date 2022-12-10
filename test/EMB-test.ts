@@ -5,7 +5,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 describe("EMB-Token", () => {
-  const provider = ethers.provider;
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
