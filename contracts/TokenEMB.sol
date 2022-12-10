@@ -5,11 +5,11 @@ import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title ERC20 Token without fixed suply
+ * @title ERC20 TokenEMB without fixed suply and standart 18 decimals 
  *
  * @notice A simple ERC20 token that will be distributed by the protocol
  */
-contract Token is ERC20, Ownable {
+contract TokenEMB is ERC20, Ownable {
     event Minted(address account, uint256 amount, uint256 ts);
 
     address private _owner;

@@ -4,7 +4,7 @@ import { EMBToken } from "../typechain-types";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("EMB-Token", () => {
+describe("EMB-Token - access control", () => {
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;

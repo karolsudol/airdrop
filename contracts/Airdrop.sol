@@ -4,7 +4,7 @@ pragma solidity ^0.8.17;
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import "./Token.sol";
+import "./TokenEMB.sol";
 
 /**
  * @title Airdrop
@@ -211,7 +211,7 @@ contract Airdrop is Ownable {
 
         require(verify(mint, v, r, s), "Airdrop: invalid signature");
 
-        Token(token).mint(msg.sender, amount);
+        TokenEMB(token).mint(msg.sender, amount);
 
         airdrops[msg.sender] = true;
         usedMessages[signature] = true;

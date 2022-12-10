@@ -4,7 +4,7 @@ import { Token } from "../typechain-types";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("Token", () => {
+describe("TokenEMB - ownable", () => {
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
@@ -17,8 +17,8 @@ describe("Token", () => {
 
   beforeEach(async function () {
     [owner, account1, account2, ...rest] = await ethers.getSigners();
-    NAME = "Token";
-    SYMBOL = "TKN";
+    NAME = "TokenEMB";
+    SYMBOL = "EMB";
     ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
     token = (await (
