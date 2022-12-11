@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "./TokenEMB.sol";
 
-contract ProtocolPersonalSign is Ownable {
+contract ProtocolAirdrop is Ownable {
     /* ======================= EVENTS ======================= */
 
     event AirdropProcessed(address recipient, uint256 amount);
@@ -47,6 +47,16 @@ contract ProtocolPersonalSign is Ownable {
 
     /* ======================= CONSTRUCTOR ======================= */
 
+    /**
+     * @notice Sets the necessary initial minter verification data
+     *
+     * @param signer address of the off chain signer worker
+     * @param _token instance of the EMBToken that will be minted
+     * @param maxTokenMintNo total mintalble amount allocated to the whole airdrop
+     * @param _maxTokensNoPerMint max amount to mint per one airdrop
+     *
+     * @dev `EIP712_DOMAIN` and `NOT_ENTERED` reentrancy status are also set here.
+     */
     constructor(
         address signer,
         address _token,
@@ -60,41 +70,17 @@ contract ProtocolPersonalSign is Ownable {
         maxTokensNoPerMint = _maxTokensNoPerMint;
     }
 
-    // Allowlist addresses
-    // function recoverSigner(bytes32 hash, bytes memory signature)
-    //     public
-    //     pure
-    //     returns (address)
-    // {
-    //     bytes32 messageDigest = keccak256(
-    //         abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
-    //     );
-    //     return ECDSA.recover(messageDigest, signature);
-    // }
+    /* ======================= MODIFIERS ======================= */
 
-    function _hash(address account, uint256 amount)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return
-            ECDSA.toEthSignedMessageHash(
-                keccak256(abi.encodePacked(account, amount))
-            );
+    /**
+     *  @dev Prevents from exceeding total airdrop allowance
+     */
+    modifier maxMinted() {
+        require(_tokenMintCount <= _maxTokenMintNo, "Airdrop: maxed supply");
+        _;
     }
 
-    function _verify(bytes32 digest, bytes memory signature)
-        internal
-        view
-        returns (bool)
-    {
-        address _signerRecovered = ECDSA.recover(digest, signature);
-        if (_signer == _signerRecovered) {
-            return true;
-        } else {
-            return false;
-        }
-    }
+    /* ======================= PUBLIC FUNCTIONS ======================= */
 
     /**
      * @notice Allows a msg.sender to mint their EMB token by providing a signature is signed by the `Protocol.signer` address.
@@ -107,20 +93,18 @@ contract ProtocolPersonalSign is Ownable {
     function claimAirdrop(
         address _minter,
         uint256 _amount,
-        // bytes32 hash,
         bytes calldata signature
-    ) public {
+    ) public maxMinted {
         require(
             _verify(_hash(_minter, _amount), signature),
-            "Invalid signature"
+            "Airdrop: Invalid signature"
         );
 
-        // require(
-        //     recoverSigner(_hash(_minter, _amount), signature) == _signer,
-        //     "Address is not allowlisted"
-        // );
-        require(!_signatureUsed[signature], "Signature has already been used");
-        require(_tokenMintCount <= _maxTokenMintNo, "Airdrop: maxed supply");
+        require(
+            !_signatureUsed[signature],
+            "Airdrop: Signature has already been used"
+        );
+
         require(
             _amount <= maxTokensNoPerMint,
             "Airdrop: exceeded token amount per mint"
@@ -129,6 +113,7 @@ contract ProtocolPersonalSign is Ownable {
         _mint(_minter, _amount);
 
         _signatureUsed[signature] = true;
+        _tokenMintCount += _amount;
 
         emit AirdropProcessed(msg.sender, _amount);
     }
@@ -145,5 +130,43 @@ contract ProtocolPersonalSign is Ownable {
     function _mint(address _minter, uint256 _amount) private {
         TokenEMB(token).mint(_minter, _amount);
         _tokenMintCount += _amount;
+    }
+
+    /**
+     * @dev hashes message
+     *
+     * @param account The address which will mint the EMB tokens
+     * @param amount The amount of EMB to be minted
+     *
+     */
+    function _hash(address account, uint256 amount)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return
+            ECDSA.toEthSignedMessageHash(
+                keccak256(abi.encodePacked(account, amount))
+            );
+    }
+
+    /**
+     * @dev verifies whether designated signer signed the messgae
+     *
+     * @param digest message in bytes
+     * @param signature signed message
+     *
+     */
+    function _verify(bytes32 digest, bytes memory signature)
+        internal
+        view
+        returns (bool)
+    {
+        address _signerRecovered = ECDSA.recover(digest, signature);
+        if (_signer == _signerRecovered) {
+            return true;
+        } else {
+            return false;
+        }
     }
 }
