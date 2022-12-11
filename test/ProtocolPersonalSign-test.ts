@@ -1,10 +1,19 @@
 import { Wallet } from "ethers";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { Protocol, Token, ERC20, IERC20 } from "../typechain-types";
+import { ProtocolPersonalSign, TokenEMB } from "../typechain-types";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("ProtocolPersonalSign-Airdrop", () => {
+function hashToken(account: string, amount: string) {
+  return Buffer.from(
+    ethers.utils
+      .solidityKeccak256(["address", "uint256"], [account, amount])
+      .slice(2),
+    "hex"
+  );
+}
+
+describe("ProtocolPersonalSign-Airdrop for TokenEMB - ownable", () => {
   const provider = ethers.provider;
 
   let owner: SignerWithAddress;
@@ -12,8 +21,8 @@ describe("ProtocolPersonalSign-Airdrop", () => {
   let account2: SignerWithAddress;
   // let rest: SignerWithAddress[];
 
-  let token: Token;
-  let airdrop: Protocol;
+  let token: TokenEMB;
+  let airdrop: ProtocolPersonalSign;
   // let merkleRoot: string;
 
   const MAX_SUPPLY = 10;
@@ -46,7 +55,7 @@ describe("ProtocolPersonalSign-Airdrop", () => {
 
     token = (await (
       await ethers.getContractFactory(NAME)
-    ).deploy(NAME, SYMBOL)) as Token;
+    ).deploy(NAME, SYMBOL)) as TokenEMB;
     await token.deployed();
 
     airdrop = (await (
@@ -56,7 +65,7 @@ describe("ProtocolPersonalSign-Airdrop", () => {
       token.address,
       MAX_SUPPLY,
       MAX_PER_MINT
-    )) as Protocol;
+    )) as ProtocolPersonalSign;
     await airdrop.deployed();
   });
 
@@ -77,21 +86,24 @@ describe("ProtocolPersonalSign-Airdrop", () => {
 
       await token.connect(owner).transferOwnership(airdrop.address);
 
-      messageHash = ethers.utils.id(allowlistedAddresses[0]);
+      signature = await signer.signMessage(hashToken(account1.address, "2"));
 
-      let messageBytes = ethers.utils.arrayify(messageHash);
-      signature = await signer.signMessage(messageBytes);
-
-      const recover = await airdrop.recoverSigner(messageHash, signature);
-
-      await airdrop
-        .connect(account1)
-        .claimAirdrop(account1.address, 2, messageHash, signature);
+      await expect(
+        airdrop.connect(account1).claimAirdrop(account1.address, 2, signature)
+      )
+        .to.emit(airdrop, "AirdropProcessed")
+        .withArgs(account1.address, 2);
 
       expect(await token.totalSupply()).to.equal(2);
       expect(await token.balanceOf(account1.address)).to.equal(2);
     });
 
-    it("should revert mint correctly for  address", async () => {});
+    it("should revert mint correctly when contract has no rights to mint", async () => {
+      signature = await signer.signMessage(hashToken(account1.address, "2"));
+
+      await expect(
+        airdrop.connect(account1).claimAirdrop(account1.address, 2, signature)
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
   });
 });

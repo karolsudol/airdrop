@@ -9,7 +9,7 @@ import "./TokenEMB.sol";
 contract ProtocolPersonalSign is Ownable {
     /* ======================= EVENTS ======================= */
 
-    event AirdropProcessed(address recipient, uint256 amount, uint256 ts);
+    event AirdropProcessed(address recipient, uint256 amount);
 
     /* ======================= PUBLIC STATE VARS ======================= */
 
@@ -61,27 +61,64 @@ contract ProtocolPersonalSign is Ownable {
     }
 
     // Allowlist addresses
-    function recoverSigner(bytes32 hash, bytes memory signature)
-        public
+    // function recoverSigner(bytes32 hash, bytes memory signature)
+    //     public
+    //     pure
+    //     returns (address)
+    // {
+    //     bytes32 messageDigest = keccak256(
+    //         abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
+    //     );
+    //     return ECDSA.recover(messageDigest, signature);
+    // }
+
+    function _hash(address account, uint256 amount)
+        internal
         pure
-        returns (address)
+        returns (bytes32)
     {
-        bytes32 messageDigest = keccak256(
-            abi.encodePacked("\x19Ethereum Signed Message:\n32", hash)
-        );
-        return ECDSA.recover(messageDigest, signature);
+        return
+            ECDSA.toEthSignedMessageHash(
+                keccak256(abi.encodePacked(account, amount))
+            );
     }
 
+    function _verify(bytes32 digest, bytes memory signature)
+        internal
+        view
+        returns (bool)
+    {
+        address _signerRecovered = ECDSA.recover(digest, signature);
+        if (_signer == _signerRecovered) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    /**
+     * @notice Allows a msg.sender to mint their EMB token by providing a signature is signed by the `Protocol.signer` address.
+     *
+     * @param _minter an address where tokens will be minted to
+     * @param _amount the value of ERC20 token in 18 dec to be minted
+     * @param signature An array of bytes representing a signature created by the  `Airdrop.signer` address
+     *
+     */
     function claimAirdrop(
         address _minter,
         uint256 _amount,
-        bytes32 hash,
+        // bytes32 hash,
         bytes calldata signature
     ) public {
         require(
-            recoverSigner(hash, signature) == _signer,
-            "Address is not allowlisted"
+            _verify(_hash(_minter, _amount), signature),
+            "Invalid signature"
         );
+
+        // require(
+        //     recoverSigner(_hash(_minter, _amount), signature) == _signer,
+        //     "Address is not allowlisted"
+        // );
         require(!_signatureUsed[signature], "Signature has already been used");
         require(_tokenMintCount <= _maxTokenMintNo, "Airdrop: maxed supply");
         require(
@@ -93,7 +130,7 @@ contract ProtocolPersonalSign is Ownable {
 
         _signatureUsed[signature] = true;
 
-        emit AirdropProcessed(msg.sender, _amount, block.timestamp);
+        emit AirdropProcessed(msg.sender, _amount);
     }
 
     /* ======================= INTERNAL FUNCTIONS ======================= */
