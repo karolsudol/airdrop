@@ -120,7 +120,7 @@ contract ProtocolAirdrop is Ownable {
             EIP712Domain({
                 name: "Airdrop",
                 version: "1",
-                chainId: 51,
+                chainId: block.chainid,
                 verifyingContract: address(this)
             })
         );

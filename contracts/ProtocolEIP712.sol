@@ -42,16 +42,16 @@ library ProtocolEIP712 {
         address verifyingContract,
         address authorizedSigner,
         bytes memory signature
-    ) external pure returns (bool) {
-        // uint256 chainId;
-        // assembly {
-        //     chainId := chainid()
-        // }
+    ) external view returns (bool) {
+        uint256 chainId;
+        assembly {
+            chainId := chainid()
+        }
         bytes32 domainSeperator = hashDomain(
             EIP712Domain({
                 name: "Airdrop",
                 version: "1",
-                chainId: 51,
+                chainId: chainId,
                 verifyingContract: verifyingContract
             })
         );
@@ -101,9 +101,9 @@ library ProtocolEIP712 {
     ) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         address signer = ecrecover(digest(mint, domainSeparator), v, r, s);
-        // if (signer == address(0)) {
-        //     revert("EIP712: zero address");
-        // }
+        if (signer == address(0)) {
+            revert("EIP712: zero address");
+        }
         return signer;
     }
 

@@ -22,7 +22,7 @@ Instead of minting and distributing all the tokens in a single transaction (whic
    - max token units per drop
 
 2. requires owner's right to be granted by the TokenEMB contracts owner - in order to mint
-3. mints token using either valid `ECDSA` or `EIP-712` signatures
+3. mints token using either valid `ECDSA` (covered inside the contract) or `EIP-712` (with ProtocolEIP712 lib) signatures
 
 ## Usage
 
@@ -31,7 +31,7 @@ npm install hardhat
 REPORT_GAS=true npx hardhat test
 npx hardhat coverage
 npx hardhat node
-npx hardhat run scripts/deploy.ts
+npx hardhat run scripts/deployTo.ts
 ```
 
 ## Deployments

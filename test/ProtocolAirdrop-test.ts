@@ -53,8 +53,8 @@ describe("Protocol Airdrop", () => {
     //   { sortPairs: true }
     // );
 
-    const ReentrancyMock = artifacts.require("ReentrancyMock");
-    const ReentrancyAttack = artifacts.require("ReentrancyAttack");
+    // const ReentrancyMock = artifacts.require("ReentrancyMock");
+    // const ReentrancyAttack = artifacts.require("ReentrancyAttack");
 
     [owner, account1, account2, account3] = await ethers.getSigners();
 
