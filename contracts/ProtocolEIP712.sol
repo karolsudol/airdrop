@@ -19,21 +19,30 @@ struct Mint {
     uint256 amount;
 }
 
+/**
+ * @dev EIP712 structured message signature lib
+ */
 library ProtocolEIP712 {
     bytes32 constant EIP712DOMAIN_TYPEHASH =
         keccak256(
             "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
         );
 
+    /**
+     * @dev minting structured message
+     */
     bytes32 constant MINT_TYPEHASH =
         keccak256("Mint(address minter,uint256 amount)");
 
+    /**
+     * @dev verifies EIP712 structured message signature
+     */
     function verify(
         Mint memory mint,
         address verifyingContract,
         address authorizedSigner,
         bytes memory signature
-    ) external view returns (bool) {
+    ) external pure returns (bool) {
         // uint256 chainId;
         // assembly {
         //     chainId := chainid()
@@ -92,12 +101,18 @@ library ProtocolEIP712 {
     ) internal pure returns (address) {
         (bytes32 r, bytes32 s, uint8 v) = splitSignature(signature);
         address signer = ecrecover(digest(mint, domainSeparator), v, r, s);
-        if (signer == address(0)) {
-            revert("EIP712: zero address");
-        }
+        // if (signer == address(0)) {
+        //     revert("EIP712: zero address");
+        // }
         return signer;
     }
 
+    /**
+     * @dev Helper function for formatting the minter data in an EIP-712 compatible way
+     *
+     * @param sig signature msg received from a sender
+     *
+     */
     function splitSignature(bytes memory sig)
         internal
         pure
@@ -107,7 +122,6 @@ library ProtocolEIP712 {
             uint8 v
         )
     {
-        require(sig.length == 65, "EIP712: invalid signature length");
         assembly {
             /*
             First 32 bytes stores the length of the signature

@@ -54,6 +54,42 @@ contract ProtocolAirdrop is Ownable {
      */
     address private immutable _signer;
 
+    /* ======================= CONST PRIVATE RE-ENTTANCE VARS ======================= */
+
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    // * ======================= EIP712 DOMAIN ======================= */
+
+    /**
+     * @notice the EIP712 domain separator for minting EMB
+     */
+    bytes32 public immutable DOMAIN_SEPARATOR;
+
+    bytes32 constant EIP712DOMAIN_TYPEHASH =
+        keccak256(
+            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
+        );
+
+    function hash(EIP712Domain memory eip712Domain)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return
+            keccak256(
+                abi.encode(
+                    EIP712DOMAIN_TYPEHASH,
+                    keccak256(bytes(eip712Domain.name)),
+                    keccak256(bytes(eip712Domain.version)),
+                    eip712Domain.chainId,
+                    eip712Domain.verifyingContract
+                )
+            );
+    }
+
     /* ======================= CONSTRUCTOR ======================= */
 
     /**
@@ -101,6 +137,27 @@ contract ProtocolAirdrop is Ownable {
         _;
     }
 
+    /**
+     * @dev Prevents a contract from calling itself, directly or indirectly.
+     * Calling a `nonReentrant` function from another `nonReentrant`
+     * function is not supported. It is possible to prevent this from happening
+     * by making the `nonReentrant` function external, and make it call a
+     * `private` function that does the actual work.
+     */
+    modifier nonReentrant() {
+        // On the first call to nonReentrant, _notEntered will be true
+        require(_status != _ENTERED, "Airdrop: reentrant call");
+
+        // Any calls to nonReentrant after this point will fail
+        _status = _ENTERED;
+
+        _;
+
+        // By storing the original value once again, a refund is triggered (see
+        // https://eips.ethereum.org/EIPS/eip-2200)
+        _status = _NOT_ENTERED;
+    }
+
     /* ======================= PUBLIC FUNCTIONS ======================= */
 
     /**
@@ -115,14 +172,15 @@ contract ProtocolAirdrop is Ownable {
         address minter,
         uint256 amount,
         bytes calldata signature
-    ) public maxMinted {
+    ) public maxMinted nonReentrant {
         Mint memory mint;
         mint.amount = amount;
         mint.minter = minter;
 
+        require(signature.length == 65, "Airdrop: invalid signature length");
+
         require(
             (_verify(_hashMsg(minter, amount), signature) ||
-                _verify(_toTypedDataHash(minter, amount), signature) ||
                 ProtocolEIP712.verify(mint, address(this), _signer, signature)),
             "Airdrop: Invalid signature"
         );
@@ -143,65 +201,6 @@ contract ProtocolAirdrop is Ownable {
         _tokenMintCount += amount;
 
         emit AirdropProcessed(minter, amount);
-    }
-
-    /* ======================= EIP-712 - DOMAIN ======================= */
-
-    // /**
-    //  * @notice EIP712 domain structure
-    //  */
-    // struct EIP712Domain {
-    //     string name;
-    //     string version;
-    //     uint256 chainId;
-    //     address verifyingContract;
-    // }
-
-    /**
-     * @notice the EIP712 domain separator for minting EMB
-     */
-    bytes32 public immutable DOMAIN_SEPARATOR;
-
-    bytes32 constant EIP712DOMAIN_TYPEHASH =
-        keccak256(
-            "EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"
-        );
-
-    function hash(EIP712Domain memory eip712Domain)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return
-            keccak256(
-                abi.encode(
-                    EIP712DOMAIN_TYPEHASH,
-                    keccak256(bytes(eip712Domain.name)),
-                    keccak256(bytes(eip712Domain.version)),
-                    eip712Domain.chainId,
-                    eip712Domain.verifyingContract
-                )
-            );
-    }
-
-    /* ======================= EIP-712 - MINT ======================= */
-
-    // /**
-    //  * @notice EIP712 minting msg data structure
-    //  */
-    // struct Mint {
-    //     address minter;
-    //     uint256 amount;
-    // }
-
-    /**
-     * @notice EIP-712 typehash for minting token
-     */
-    bytes32 public constant MINT_TYPEHASH =
-        keccak256("Mint(address minter,uint256 amount)");
-
-    function hashMint(Mint memory mint) internal pure returns (bytes32) {
-        return keccak256(abi.encode(MINT_TYPEHASH, mint.minter, mint.amount));
     }
 
     /* ======================= INTERNAL FUNCTIONS ======================= */
@@ -258,36 +257,15 @@ contract ProtocolAirdrop is Ownable {
             );
     }
 
-    /**
-     * @dev Helper function for formatting the minter data in an EIP-712 compatible way
-     *
-     * @param minter The address which will mint the EMB tokens
-     * @param amount The amount of EMB to be minted
-     *
-     * @return A 32-byte hash, which will have been signed by `Protocol.signer`
-     */
-    function _toTypedDataHash(address minter, uint256 amount)
-        internal
-        view
-        returns (bytes32)
-    {
-        Mint memory mint;
-        mint = Mint(minter, amount);
-        bytes32 structHash = keccak256(
-            abi.encode(EIP712DOMAIN_TYPEHASH, hashMint(mint))
-        );
-        return ECDSA.toTypedDataHash(DOMAIN_SEPARATOR, structHash);
-    }
-
     /* ======================= MERKLE PROOF ======================= */
 
-    function _leaf(address minter, uint256 amount)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(minter, amount));
-    }
+    // function _leaf(address minter, uint256 amount)
+    //     internal
+    //     pure
+    //     returns (bytes32)
+    // {
+    //     return keccak256(abi.encodePacked(minter, amount));
+    // }
 
     // function _verifyMerkleProof(bytes32 leaf, bytes32[] memory proof)
     //     internal
@@ -295,22 +273,5 @@ contract ProtocolAirdrop is Ownable {
     //     returns (bool)
     // {
     //     return MerkleProof.verify(proof, root, leaf);
-    // }
-
-    // function _hashV4(address account, uint256 tokenId)
-    //     internal
-    //     view
-    //     returns (bytes32)
-    // {
-    //     return
-    //         _hashTypedDataV4(
-    //             keccak256(
-    //                 abi.encode(
-    //                     keccak256("Mint(address minter,uint256 amount)"),
-    //                     tokenId,
-    //                     account
-    //                 )
-    //             )
-    //         );
     // }
 }
