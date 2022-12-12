@@ -1,7 +1,6 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 
-import "./tasks/bridge-tasks";
 import * as dotenv from "dotenv";
 dotenv.config();
 
