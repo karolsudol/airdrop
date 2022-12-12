@@ -4,7 +4,10 @@ import { ProtocolAirdrop, TokenEMB } from "../typechain-types";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-function hashToken(account: string, amount: string) {
+// import {} from "../contracts/ver"
+// import { MerkleTree } from "merkletreejs";
+
+function hash(account: string, amount: string) {
   return Buffer.from(
     ethers.utils
       .solidityKeccak256(["address", "uint256"], [account, amount])
@@ -15,16 +18,16 @@ function hashToken(account: string, amount: string) {
 
 describe("Protocol Airdrop", () => {
   const provider = ethers.provider;
+  // let merkleTree: MerkleTree;
 
   let owner: SignerWithAddress;
   let account1: SignerWithAddress;
   let account2: SignerWithAddress;
   let account3: SignerWithAddress;
-  // let rest: SignerWithAddress[];
 
   let token: TokenEMB;
   let airdrop: ProtocolAirdrop;
-  // let merkleRoot: string;
+  let merkleRoot: string;
 
   const MAX_SUPPLY = 4;
   const MAX_PER_MINT = 2;
@@ -43,6 +46,12 @@ describe("Protocol Airdrop", () => {
   let messageHash, signature;
 
   beforeEach(async function () {
+    // merkleTree = new MerkleTree(
+    //   Object.entries().map((token) => hash(...token)),
+    //   keccak256,
+    //   { sortPairs: true }
+    // );
+
     [owner, account1, account2, account3] = await ethers.getSigners();
 
     allowlistedAddresses = [account1.address, account2.address];
@@ -54,13 +63,21 @@ describe("Protocol Airdrop", () => {
 
     signer = new Wallet(privateKey);
 
+    const Lib = await ethers.getContractFactory("ProtocolEIP712");
+    const lib = await Lib.deploy();
+    await lib.deployed();
+
     token = (await (
       await ethers.getContractFactory(NAME)
     ).deploy(NAME, SYMBOL)) as TokenEMB;
     await token.deployed();
 
     airdrop = (await (
-      await ethers.getContractFactory("ProtocolAirdrop")
+      await ethers.getContractFactory("ProtocolAirdrop", {
+        libraries: {
+          ProtocolEIP712: lib.address,
+        },
+      })
     ).deploy(
       signer.address,
       token.address,
@@ -81,7 +98,7 @@ describe("Protocol Airdrop", () => {
     });
   });
 
-  describe("auth with PersonalSign", async function () {
+  describe("auth with message", async function () {
     describe("minting with signature", async function () {
       describe("mint as expected", async function () {
         it("should mint correctly", async () => {
@@ -90,9 +107,7 @@ describe("Protocol Airdrop", () => {
 
           await token.connect(owner).transferOwnership(airdrop.address);
 
-          signature = await signer.signMessage(
-            hashToken(account1.address, "2")
-          );
+          signature = await signer.signMessage(hash(account1.address, "2"));
 
           await expect(
             airdrop
@@ -109,9 +124,7 @@ describe("Protocol Airdrop", () => {
 
       describe("mint - prevent hacks", async function () {
         it("should revert mint when protocol is not token owner", async () => {
-          signature = await signer.signMessage(
-            hashToken(account1.address, "2")
-          );
+          signature = await signer.signMessage(hash(account1.address, "2"));
 
           await expect(
             airdrop
@@ -123,23 +136,19 @@ describe("Protocol Airdrop", () => {
         it("should revert mint when invalid signature", async () => {
           await token.connect(owner).transferOwnership(airdrop.address);
 
-          signature = await signer.signMessage(
-            hashToken(account3.address, "2")
-          );
+          signature = await signer.signMessage(hash(account3.address, "2"));
 
           await expect(
             airdrop
               .connect(account1)
               .claimAirdrop(account1.address, 2, signature)
-          ).to.be.revertedWith("Airdrop: Invalid signature");
+          ).to.be.revertedWith("EIP712: unauthorized signer");
         });
 
         it("should revert mint when minter used signature", async () => {
           await token.connect(owner).transferOwnership(airdrop.address);
 
-          signature = await signer.signMessage(
-            hashToken(account1.address, "2")
-          );
+          signature = await signer.signMessage(hash(account1.address, "2"));
 
           await airdrop
             .connect(account1)
@@ -160,7 +169,7 @@ describe("Protocol Airdrop", () => {
             .claimAirdrop(
               account1.address,
               2,
-              signer.signMessage(hashToken(account1.address, "2"))
+              signer.signMessage(hash(account1.address, "2"))
             );
 
           await airdrop
@@ -168,7 +177,7 @@ describe("Protocol Airdrop", () => {
             .claimAirdrop(
               account2.address,
               2,
-              signer.signMessage(hashToken(account2.address, "2"))
+              signer.signMessage(hash(account2.address, "2"))
             );
 
           await expect(
@@ -177,7 +186,7 @@ describe("Protocol Airdrop", () => {
               .claimAirdrop(
                 account3.address,
                 2,
-                signer.signMessage(hashToken(account3.address, "2"))
+                signer.signMessage(hash(account3.address, "2"))
               )
           ).to.be.revertedWith("Airdrop: maxed supply");
         });
@@ -185,9 +194,7 @@ describe("Protocol Airdrop", () => {
         it("should revert when minter used its allocation", async () => {
           await token.connect(owner).transferOwnership(airdrop.address);
 
-          signature = await signer.signMessage(
-            hashToken(account1.address, "3")
-          );
+          signature = await signer.signMessage(hash(account1.address, "3"));
 
           await expect(
             airdrop
@@ -199,21 +206,43 @@ describe("Protocol Airdrop", () => {
     });
   });
 
-  // describe("auth with PersonalSign", async function () {
-  //   describe("mint", async function () {
-  //     it("should mint correctly", async () => {});
+  describe("auth with signed typed ERC721", async function () {
+    it("should mint correctly", async () => {
+      await token.connect(owner).transferOwnership(airdrop.address);
 
-  //     it("should revert mint correctly when contract has no rights to mint", async () => {});
-  //   });
-  //   describe("duplicate mint", async function () {
-  //     it("should mint correctly", async () => {});
+      const minter = account1.address;
+      const amount = 2;
 
-  //     it("should revert mint correctly when contract has no rights to mint", async () => {});
-  //   });
-  //   describe("frontrun", async function () {
-  //     it("should mint correctly", async () => {});
+      /**
+       * signer creates signature
+       */
+      const signature = await signer._signTypedData(
+        // Domain
+        {
+          name: "Airdrop",
+          version: "1",
+          chainId: 51,
+          verifyingContract: airdrop.address,
+        },
+        // Types
+        {
+          Mint: [
+            { name: "minter", type: "address" },
+            { name: "amount", type: "uint256" },
+          ],
+        },
+        // Value
+        { minter, amount }
+      );
 
-  //     it("should revert mint correctly when contract has no rights to mint", async () => {});
-  //   });
-  // });
+      await airdrop.connect(account1).claimAirdrop(minter, amount, signature);
+    });
+  });
+
+  describe("auth with merkle tree root", async function () {
+    it("should mint correctly", async () => {
+      // await token.connect(owner).transferOwnership(airdrop.address);
+      // await airdrop.connect(account1).claimAirdrop(minter, amount, signature);
+    });
+  });
 });
