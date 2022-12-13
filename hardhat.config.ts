@@ -1,7 +1,10 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
+import "./tasks/sign-gen-task.ts";
+import "./scripts/hash.ts";
 
 import * as dotenv from "dotenv";
+
 dotenv.config();
 
 const SEPOLIA_URL = `https://sepolia.infura.io/v3/${process.env.INFURA_KEY}`;
