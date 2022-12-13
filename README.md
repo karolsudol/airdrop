@@ -24,24 +24,6 @@ Instead of minting and distributing all the tokens in a single transaction (whic
 2. requires owner's right to be granted by the TokenEMB contracts owner - in order to mint
 3. mints token using either valid `ECDSA` (covered inside the contract) or `EIP-712` (with ProtocolEIP712 lib) signatures
 
-## Usage
-
-```
-npm install hardhat
-REPORT_GAS=true npx hardhat test
-npx hardhat coverage
-
-npx hardhat run --network goerli scripts/deployTokenEMB.ts
- npx hardhat verify --network goerli 0x672A5D9a7BB38592A163c591dc10E4410C1959A0 "Token EMB" "EMB"
-
-npx hardhat run --network goerli scripts/deployProtocolEIP712.ts
-npx hardhat verify --network goerli 0x032c0E85Bd37CFA30E35b1B2Ac98322D8bF42D2B
-
-npx hardhat run --network goerli scripts/deployProtocolAirdrop.ts
-npx hardhat verify --network goerli --libraries library.ts 0xb5e79d544Dc8dE31991Ac395027E62B3dD43C028 "0x698b03E5F2e3b9D0eAF6f142468817bA1259c885" "0x672A5D9a7BB38592A163c591dc10E4410C1959A0" "100000000000000000000" "10000000000000000000"
- 9288
-```
-
 ## Deployed on Goerli
 
 - `TokenEMB` Deployed and Verified on [goerli](https://goerli.etherscan.io/address/0x672A5D9a7BB38592A163c591dc10E4410C1959A0#code)
@@ -50,6 +32,27 @@ npx hardhat verify --network goerli --libraries library.ts 0xb5e79d544Dc8dE31991
 
 - with [owner](https://goerli.etherscan.io/address/0x1f190F523deBD185183d8Afe76e4587a08bb84e7)
 - with [signer](https://goerli.etherscan.io/address/0x698b03E5F2e3b9D0eAF6f142468817bA1259c885)
+
+## Usage
+
+```
+npm install hardhat
+REPORT_GAS=true npx hardhat test
+npx hardhat coverage
+
+
+npx hardhat run --network goerli scripts/deployTokenEMB.ts
+npx hardhat verify --network goerli 0x672A5D9a7BB38592A163c591dc10E4410C1959A0 "Token EMB" "EMB"
+
+
+npx hardhat run --network goerli scripts/deployProtocolEIP712.ts
+npx hardhat verify --network goerli 0x032c0E85Bd37CFA30E35b1B2Ac98322D8bF42D2B
+
+
+npx hardhat run --network goerli scripts/deployProtocolAirdrop.ts
+npx hardhat verify --network goerli --libraries library.ts 0xb5e79d544Dc8dE31991Ac395027E62B3dD43C028 "0x698b03E5F2e3b9D0eAF6f142468817bA1259c885" "0x672A5D9a7BB38592A163c591dc10E4410C1959A0" "100000000000000000000" "10000000000000000000"
+ 9288
+```
 
 ## coverage
 
